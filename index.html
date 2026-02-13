@@ -1,41 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuickShop Scan - Free POS</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; min-height: 100vh; }
-        h1 { color: #1a73e8; text-align: center; font-size: 24px; }
-        #reader { width: 100%; border: 2px solid #1a73e8; border-radius: 8px; overflow: hidden; }
-        .bill-area { margin-top: 20px; border-top: 2px solid #eee; padding-top: 10px; }
-        .item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
-        .total { font-size: 20px; font-weight: bold; color: #d93025; text-align: right; margin-top: 15px; }
-        button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-top: 10px; }
-        .inventory-hint { font-size: 12px; color: #666; text-align: center; margin-bottom: 10px; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <h1>QuickShop Scan 🛒</h1>
-    <p class="inventory-hint">Place barcode in front of camera</p>
-    
-    <div id="reader"></div>
-
-    <div class="bill-area">
-        <h3>Current Bill:</h3>
-        <div id="bill-items">
-            </div>
-        <div class="total">Total: ₹<span id="grand-total">0</span></div>
-        <button onclick="clearBill()">New Customer / Reset</button>
-    </div>
-</div>
-
 <script>
-    // Mock Inventory (आप यहाँ और भी प्रोडक्ट्स जोड़ सकते हैं)
+    // Inventory
     const inventory = {
         "8906088213849": { name: "Chilli spice", price: 45 },
         "890203000002": { name: "Amul Butter 100g", price: 55 },
@@ -44,26 +8,50 @@
     };
 
     let totalAmount = 0;
+    let cart = {}; // store items with quantity
 
-    function onScanSuccess(decodedText, decodedResult) {
-        // अगर बारकोड इन्वेंटरी में है
+    function onScanSuccess(decodedText) {
         if (inventory[decodedText]) {
             const item = inventory[decodedText];
-            addItemToBill(item.name, item.price);
-            
-            // बीप साउंड या वाइब्रेशन (ऑप्शनल)
+            addItemToBill(decodedText, item.name, item.price);
+
             if (navigator.vibrate) navigator.vibrate(100);
         } else {
             alert("Unknown Product: " + decodedText);
         }
     }
 
-    function addItemToBill(name, price) {
+    function addItemToBill(barcode, name, price) {
         const billDiv = document.getElementById('bill-items');
-        const itemRow = document.createElement('div');
-        itemRow.className = 'item';
-        itemRow.innerHTML = `<span>${name}</span> <span>₹${price}</span>`;
-        billDiv.appendChild(itemRow);
+
+        // If item already scanned
+        if (cart[barcode]) {
+            cart[barcode].quantity++;
+            cart[barcode].totalPrice += price;
+
+            // Update UI
+            document.getElementById(barcode).innerHTML =
+                `<span>${name} x${cart[barcode].quantity}</span>
+                 <span>₹${cart[barcode].totalPrice}</span>`;
+        } 
+        else {
+            // New item
+            cart[barcode] = {
+                name: name,
+                price: price,
+                quantity: 1,
+                totalPrice: price
+            };
+
+            const itemRow = document.createElement('div');
+            itemRow.className = 'item';
+            itemRow.id = barcode;
+            itemRow.innerHTML =
+                `<span>${name} x1</span>
+                 <span>₹${price}</span>`;
+
+            billDiv.appendChild(itemRow);
+        }
 
         totalAmount += price;
         document.getElementById('grand-total').innerText = totalAmount;
@@ -72,6 +60,7 @@
     function clearBill() {
         document.getElementById('bill-items').innerHTML = '';
         totalAmount = 0;
+        cart = {};
         document.getElementById('grand-total').innerText = '0';
     }
 
@@ -79,8 +68,3 @@
     let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
     html5QrcodeScanner.render(onScanSuccess);
 </script>
-
-</body>
-
-</html>
-
