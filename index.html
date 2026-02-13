@@ -1,70 +1,80 @@
 <script>
-    // Inventory
     const inventory = {
         "8906088213849": { name: "Chilli spice", price: 45 },
         "890203000002": { name: "Amul Butter 100g", price: 55 },
-        "8901719113101": { name: "Maggi Noodles", price: 14 },
-        "123456": { name: "Sample Item", price: 100 }
+        "8901719113101": { name: "Maggi Noodles", price: 14 }
     };
 
+    let cart = {};
     let totalAmount = 0;
-    let cart = {}; // store items with quantity
 
     function onScanSuccess(decodedText) {
         if (inventory[decodedText]) {
             const item = inventory[decodedText];
-            addItemToBill(decodedText, item.name, item.price);
-
+            addOrUpdateItem(decodedText, item.name, item.price);
             if (navigator.vibrate) navigator.vibrate(100);
         } else {
             alert("Unknown Product: " + decodedText);
         }
     }
 
-    function addItemToBill(barcode, name, price) {
-        const billDiv = document.getElementById('bill-items');
+    function addOrUpdateItem(barcode, name, price) {
 
-        // If item already scanned
-        if (cart[barcode]) {
-            cart[barcode].quantity++;
-            cart[barcode].totalPrice += price;
-
-            // Update UI
-            document.getElementById(barcode).innerHTML =
-                `<span>${name} x${cart[barcode].quantity}</span>
-                 <span>₹${cart[barcode].totalPrice}</span>`;
-        } 
-        else {
-            // New item
-            cart[barcode] = {
-                name: name,
-                price: price,
-                quantity: 1,
-                totalPrice: price
-            };
-
-            const itemRow = document.createElement('div');
-            itemRow.className = 'item';
-            itemRow.id = barcode;
-            itemRow.innerHTML =
-                `<span>${name} x1</span>
-                 <span>₹${price}</span>`;
-
-            billDiv.appendChild(itemRow);
+        if (!cart[barcode]) {
+            cart[barcode] = { name, price, qty: 1 };
+        } else {
+            cart[barcode].qty++;
         }
 
-        totalAmount += price;
+        renderBill();
+    }
+
+    function increaseQty(barcode) {
+        cart[barcode].qty++;
+        renderBill();
+    }
+
+    function decreaseQty(barcode) {
+        cart[barcode].qty--;
+        if (cart[barcode].qty <= 0) {
+            delete cart[barcode];
+        }
+        renderBill();
+    }
+
+    function renderBill() {
+        const billDiv = document.getElementById('bill-items');
+        billDiv.innerHTML = '';
+        totalAmount = 0;
+
+        for (let barcode in cart) {
+            const item = cart[barcode];
+            const itemTotal = item.qty * item.price;
+            totalAmount += itemTotal;
+
+            const row = document.createElement('div');
+            row.className = 'item';
+            row.innerHTML = `
+                <span>${item.name} (₹${item.price})</span>
+                <span>
+                    <button onclick="decreaseQty('${barcode}')" style="width:25px;">-</button>
+                    ${item.qty}
+                    <button onclick="increaseQty('${barcode}')" style="width:25px;">+</button>
+                    = ₹${itemTotal}
+                </span>
+            `;
+            billDiv.appendChild(row);
+        }
+
         document.getElementById('grand-total').innerText = totalAmount;
     }
 
     function clearBill() {
-        document.getElementById('bill-items').innerHTML = '';
-        totalAmount = 0;
         cart = {};
-        document.getElementById('grand-total').innerText = '0';
+        totalAmount = 0;
+        renderBill();
     }
 
-    // Scanner Setup
     let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
     html5QrcodeScanner.render(onScanSuccess);
 </script>
