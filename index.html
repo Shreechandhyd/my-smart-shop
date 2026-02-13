@@ -1,80 +1,78 @@
 <script>
-    const inventory = {
-        "8906088213849": { name: "Chilli spice", price: 45 },
-        "890203000002": { name: "Amul Butter 100g", price: 55 },
-        "8901719113101": { name: "Maggi Noodles", price: 14 }
-    };
 
-    let cart = {};
-    let totalAmount = 0;
+const inventory = {
+    "8906088213849": { name: "Chilli spice", price: 45 },
+    "890203000002": { name: "Amul Butter 100g", price: 55 },
+    "8901719113101": { name: "Maggi Noodles", price: 14 },
+    "123456": { name: "Sample Item", price: 100 }
+};
 
-    function onScanSuccess(decodedText) {
-        if (inventory[decodedText]) {
-            const item = inventory[decodedText];
-            addOrUpdateItem(decodedText, item.name, item.price);
-            if (navigator.vibrate) navigator.vibrate(100);
-        } else {
-            alert("Unknown Product: " + decodedText);
-        }
+let cart = {};
+let totalAmount = 0;
+
+function onScanSuccess(decodedText) {
+    if (inventory[decodedText]) {
+        const item = inventory[decodedText];
+        addOrUpdateItem(decodedText, item.name, item.price);
+        if (navigator.vibrate) navigator.vibrate(100);
+    } else {
+        alert("Unknown Product: " + decodedText);
     }
+}
 
-    function addOrUpdateItem(barcode, name, price) {
-
-        if (!cart[barcode]) {
-            cart[barcode] = { name, price, qty: 1 };
-        } else {
-            cart[barcode].qty++;
-        }
-
-        renderBill();
-    }
-
-    function increaseQty(barcode) {
+function addOrUpdateItem(barcode, name, price) {
+    if (!cart[barcode]) {
+        cart[barcode] = { name, price, qty: 1 };
+    } else {
         cart[barcode].qty++;
-        renderBill();
+    }
+    renderBill();
+}
+
+function increaseQty(barcode) {
+    cart[barcode].qty++;
+    renderBill();
+}
+
+function decreaseQty(barcode) {
+    cart[barcode].qty--;
+    if (cart[barcode].qty <= 0) {
+        delete cart[barcode];
+    }
+    renderBill();
+}
+
+function renderBill() {
+    const billDiv = document.getElementById('bill-items');
+    billDiv.innerHTML = '';
+    totalAmount = 0;
+
+    for (let barcode in cart) {
+        const item = cart[barcode];
+        const itemTotal = item.qty * item.price;
+        totalAmount += itemTotal;
+
+        const row = document.createElement('div');
+        row.className = 'item';
+        row.innerHTML = `
+            <span>${item.name} (₹${item.price})</span>
+            <span>
+                <button onclick="decreaseQty('${barcode}')" style="width:25px;">-</button>
+                ${item.qty}
+                <button onclick="increaseQty('${barcode}')" style="width:25px;">+</button>
+                = ₹${itemTotal}
+            </span>
+        `;
+        billDiv.appendChild(row);
     }
 
-    function decreaseQty(barcode) {
-        cart[barcode].qty--;
-        if (cart[barcode].qty <= 0) {
-            delete cart[barcode];
-        }
-        renderBill();
-    }
+    document.getElementById('grand-total').innerText = totalAmount;
+}
 
-    function renderBill() {
-        const billDiv = document.getElementById('bill-items');
-        billDiv.innerHTML = '';
-        totalAmount = 0;
+function clearBill() {
+    cart = {};
+    totalAmount = 0;
+    renderBill();
+}
 
-        for (let barcode in cart) {
-            const item = cart[barcode];
-            const itemTotal = item.qty * item.price;
-            totalAmount += itemTotal;
-
-            const row = document.createElement('div');
-            row.className = 'item';
-            row.innerHTML = `
-                <span>${item.name} (₹${item.price})</span>
-                <span>
-                    <button onclick="decreaseQty('${barcode}')" style="width:25px;">-</button>
-                    ${item.qty}
-                    <button onclick="increaseQty('${barcode}')" style="width:25px;">+</button>
-                    = ₹${itemTotal}
-                </span>
-            `;
-            billDiv.appendChild(row);
-        }
-
-        document.getElementById('grand-total').innerText = totalAmount;
-    }
-
-    function clearBill() {
-        cart = {};
-        totalAmount = 0;
-        renderBill();
-    }
-
-    let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-    html5QrcodeScanner.render(onScanSuccess);
 </script>
